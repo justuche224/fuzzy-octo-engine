@@ -42,8 +42,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "#",
           },
           {
-            title: "Project Structure",
-            url: "#",
+            title: "Clear Filters",
+            url: "/",
           },
         ],
       },
