@@ -20,7 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "19rem",
+          "--sidebar-width": "21rem",
         } as React.CSSProperties
       }
     >
