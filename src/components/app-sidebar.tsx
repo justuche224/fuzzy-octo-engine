@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { GalleryVerticalEnd } from "lucide-react";
 
@@ -14,149 +16,204 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { InputWithButton } from "./search-bar";
-
-// This is sample data.
-const data = {
-  navMain: [
-    {
-      title: "Getting Started",
-      url: "#",
-      items: [
-        {
-          title: "Installation",
-          url: "#",
-        },
-        {
-          title: "Project Structure",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Building Your Application",
-      url: "#",
-      items: [
-        {
-          title: "Routing",
-          url: "#",
-        },
-        {
-          title: "Data Fetching",
-          url: "#",
-          isActive: true,
-        },
-        {
-          title: "Rendering",
-          url: "#",
-        },
-        {
-          title: "Caching",
-          url: "#",
-        },
-        {
-          title: "Styling",
-          url: "#",
-        },
-        {
-          title: "Optimizing",
-          url: "#",
-        },
-        {
-          title: "Configuring",
-          url: "#",
-        },
-        {
-          title: "Testing",
-          url: "#",
-        },
-        {
-          title: "Authentication",
-          url: "#",
-        },
-        {
-          title: "Deploying",
-          url: "#",
-        },
-        {
-          title: "Upgrading",
-          url: "#",
-        },
-        {
-          title: "Examples",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "API Reference",
-      url: "#",
-      items: [
-        {
-          title: "Components",
-          url: "#",
-        },
-        {
-          title: "File Conventions",
-          url: "#",
-        },
-        {
-          title: "Functions",
-          url: "#",
-        },
-        {
-          title: "next.config.js Options",
-          url: "#",
-        },
-        {
-          title: "CLI",
-          url: "#",
-        },
-        {
-          title: "Edge Runtime",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Architecture",
-      url: "#",
-      items: [
-        {
-          title: "Accessibility",
-          url: "#",
-        },
-        {
-          title: "Fast Refresh",
-          url: "#",
-        },
-        {
-          title: "Next.js Compiler",
-          url: "#",
-        },
-        {
-          title: "Supported Browsers",
-          url: "#",
-        },
-        {
-          title: "Turbopack",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Community",
-      url: "#",
-      items: [
-        {
-          title: "Contribution Guide",
-          url: "#",
-        },
-      ],
-    },
-  ],
-};
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const searchParams = useSearchParams();
+  const category = searchParams.get("category");
+  const brand = searchParams.get("brand");
+  const price = searchParams.get("price");
+
+  const createUrl = (paramName: string, paramValue: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set(paramName, paramValue);
+    return `/?${params.toString()}`;
+  };
+
+  const data = {
+    navMain: [
+      {
+        title: "Getting Started",
+        url: "#",
+        items: [
+          {
+            title: "Installation",
+            url: "#",
+          },
+          {
+            title: "Project Structure",
+            url: "#",
+          },
+        ],
+      },
+      {
+        title: "Categories",
+        url: "#",
+        items: [
+          {
+            title: "Electronics",
+            url: createUrl("category", "electronics"),
+            isActive: category === "electronics",
+          },
+          {
+            title: "Clothing",
+            url: createUrl("category", "clothing"),
+            isActive: category === "clothing",
+          },
+          {
+            title: "Books",
+            url: createUrl("category", "books"),
+            isActive: category === "books",
+          },
+          {
+            title: "Furniture",
+            url: createUrl("category", "furniture"),
+            isActive: category === "furniture",
+          },
+          {
+            title: "Toys",
+            url: createUrl("category", "toys"),
+            isActive: category === "toys",
+          },
+          {
+            title: "Shoes",
+            url: createUrl("category", "shoes"),
+            isActive: category === "shoes",
+          },
+          {
+            title: "Jewelry",
+            url: createUrl("category", "jewelry"),
+            isActive: category === "jewelry",
+          },
+          {
+            title: "Sports",
+            url: createUrl("category", "sports"),
+            isActive: category === "sports",
+          },
+          {
+            title: "Automotive",
+            url: createUrl("category", "automotive"),
+            isActive: category === "automotive",
+          },
+          {
+            title: "Health",
+            url: createUrl("category", "health"),
+            isActive: category === "health",
+          },
+          {
+            title: "Beauty",
+            url: createUrl("category", "beauty"),
+            isActive: category === "beauty",
+          },
+          {
+            title: "Home",
+            url: createUrl("category", "home"),
+            isActive: category === "home",
+          },
+          {
+            title: "Garden",
+            url: createUrl("category", "garden"),
+            isActive: category === "garden",
+          },
+          {
+            title: "Pet Supplies",
+            url: createUrl("category", "pet-supplies"),
+            isActive: category === "pet-supplies",
+          },
+          {
+            title: "Baby",
+            url: createUrl("category", "baby"),
+            isActive: category === "baby",
+          },
+        ],
+      },
+      {
+        title: "Brands",
+        url: "#",
+        items: [
+          {
+            title: "Apple",
+            url: createUrl("brand", "apple"),
+            isActive: brand === "apple",
+          },
+          {
+            title: "Samsung",
+            url: createUrl("brand", "samsung"),
+            isActive: brand === "samsung",
+          },
+          {
+            title: "Home Made",
+            url: createUrl("brand", "home-made"),
+            isActive: brand === "home-made",
+          },
+          {
+            title: "Nike",
+            url: createUrl("brand", "nike"),
+            isActive: brand === "nike",
+          },
+          {
+            title: "Adidas",
+            url: createUrl("brand", "adidas"),
+            isActive: brand === "adidas",
+          },
+          {
+            title: "Puma",
+            url: createUrl("brand", "puma"),
+            isActive: brand === "puma",
+          },
+          {
+            title: "Under Armour",
+            url: createUrl("brand", "under-armour"),
+            isActive: brand === "under-armour",
+          },
+        ],
+      },
+      {
+        title: "Price",
+        url: "#",
+        items: [
+          {
+            title: "Under $10",
+            url: createUrl("price", "under-10"),
+            isActive: price === "under-10",
+          },
+          {
+            title: "Under $50",
+            url: createUrl("price", "under-50"),
+            isActive: price === "under-50",
+          },
+          {
+            title: "Under $100",
+            url: createUrl("price", "under-100"),
+            isActive: price === "under-100",
+          },
+          {
+            title: "Over $100",
+            url: createUrl("price", "over-100"),
+            isActive: price === "over-100",
+          },
+
+          {
+            title: "Over $500",
+            url: createUrl("price", "over-500"),
+            isActive: price === "over-500",
+          },
+        ],
+      },
+      {
+        title: "Community",
+        url: "#",
+        items: [
+          {
+            title: "Contribution Guide",
+            url: "#",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <Sidebar variant="floating" {...props}>
       <SidebarHeader>
@@ -185,16 +242,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {data.navMain.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild>
-                  <a href={item.url} className="font-medium">
+                  <Link
+                    href={item.url}
+                    className="font-semibold text-xl hover:text-primary"
+                  >
                     {item.title}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
                 {item.items?.length ? (
                   <SidebarMenuSub className="ml-0 border-l-0 px-1.5">
                     {item.items.map((item) => (
                       <SidebarMenuSubItem key={item.title}>
-                        <SidebarMenuSubButton asChild isActive={item.isActive}>
-                          <a href={item.url}>{item.title}</a>
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={"isActive" in item ? item.isActive : false}
+                        >
+                          <Link href={item.url}>{item.title}</Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ))}
