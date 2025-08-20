@@ -20,7 +20,7 @@ export default function LoginPage() {
     );
   }
   if (session && session.user) {
-    router.push("/dashboard");
+    router.replace("/dashboard");
     return null;
   }
 

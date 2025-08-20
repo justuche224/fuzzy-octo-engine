@@ -39,7 +39,7 @@ export default function SignUpForm({
         },
         {
           onSuccess: () => {
-            router.push("/dashboard");
+            router.replace("/dashboard");
             toast.success("Sign up successful");
           },
           onError: (error) => {
