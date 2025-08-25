@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ModeToggle } from "@/components/mode-toggle";
 import UserMenu from "@/components/user-menu";
+import Cart from "@/cart/cart-icon";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -56,6 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             />
             <UserMenu />
             <ModeToggle />
+            <Cart />
           </div>
         </header>
         <section className="flex flex-1 flex-col gap-4 p-4 pt-0">

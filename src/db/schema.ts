@@ -1,4 +1,12 @@
-import { pgTable, text, timestamp, boolean, integer, decimal } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  decimal,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -94,7 +102,6 @@ export const productVariants = pgTable("product_variants", {
   createdAt: timestamp("created_at").notNull(),
 });
 
-
 export const products = pgTable("products", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -175,7 +182,6 @@ export const orderItems = pgTable("order_items", {
   createdAt: timestamp("created_at").notNull(),
 });
 
-
 export const wishlistItems = pgTable("wishlist_items", {
   id: text("id").primaryKey(),
   userId: text("user_id")
@@ -204,3 +210,20 @@ export const userProfiles = pgTable("user_profiles", {
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
+
+export const savedProducts = pgTable(
+  "saved_products",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("unique_user_product").on(table.userId, table.productId),
+  ]
+);

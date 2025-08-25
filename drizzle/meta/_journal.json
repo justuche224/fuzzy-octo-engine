@@ -15,6 +15,13 @@
       "when": 1754385155251,
       "tag": "0001_wet_tana_nile",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756106545305,
+      "tag": "0002_known_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }

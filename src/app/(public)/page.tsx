@@ -10,7 +10,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import formatPrice from "@/lib/format-price";
-import { Button } from "@/components/ui/button";
+import AddToCart from "@/cart/add-to-cart";
 
 const Home = async () => {
   const dealsData = await getProducts({
@@ -53,7 +53,16 @@ const Home = async () => {
         </Link>
       </CardContent>
       <CardFooter>
-        <Button className="w-full">Add to Cart</Button>
+        <AddToCart
+          product={{
+            slug: product.id,
+            name: product.name,
+            price: Number(product.price),
+            trackQuantity: product.inStock,
+            inStock: product.quantity,
+            images: product.images,
+          }}
+        />
       </CardFooter>
     </div>
   );

@@ -6,18 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Star,
-  Heart,
-  ShoppingCart,
-  Truck,
-  Shield,
-  RotateCcw,
-  Store,
-  User,
-} from "lucide-react";
+import { Star, Truck, Shield, RotateCcw, Store, User } from "lucide-react";
 import { getProduct, getProductReviews, getProducts } from "@/actions/products";
+import { isProductSaved } from "@/actions/user";
 import { notFound } from "next/navigation";
+import AddToCart from "@/cart/add-to-cart";
+import SaveProductButton from "@/components/save-product-button";
+import formatPrice from "@/lib/format-price";
 
 const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
@@ -29,7 +24,7 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     notFound();
   }
 
-  const [reviews, relatedProducts] = await Promise.all([
+  const [reviews, relatedProducts, isSaved] = await Promise.all([
     getProductReviews({ productId: id, page: 1, limit: 5 }),
     getProducts({
       page: 1,
@@ -37,6 +32,7 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
       categoryId: product.categoryId,
       sortBy: "featured",
     }),
+    isProductSaved(id),
   ]);
 
   const primaryImage =
@@ -117,10 +113,12 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
             </div>
 
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl font-bold">${product.price}</span>
+              <span className="text-3xl font-bold">
+                {formatPrice(Number(product.price))}
+              </span>
               {product.originalPrice && (
                 <span className="text-xl text-muted-foreground line-through">
-                  ${product.originalPrice}
+                  {formatPrice(Number(product.originalPrice))}
                 </span>
               )}
             </div>
@@ -139,7 +137,7 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
             </div>
 
             {/* Seller Information */}
-            <Card className="mb-6">
+            <div className="mb-6 bg-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -172,18 +170,22 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
                   </Link>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex gap-3">
-              <Button size="lg" className="flex-1">
-                <ShoppingCart className="w-5 h-5" />
-                Add to Cart
-              </Button>
-              <Button variant="outline" size="lg">
-                <Heart className="w-5 h-5" />
-              </Button>
+              <AddToCart
+                product={{
+                  slug: product.id,
+                  name: product.name,
+                  price: Number(product.price),
+                  trackQuantity: product.inStock,
+                  inStock: product.quantity,
+                  images: product.images,
+                }}
+              />
+              <SaveProductButton productId={product.id} isSaved={isSaved} />
             </div>
 
             <Button variant="outline" size="lg" className="w-full">
@@ -268,14 +270,14 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
                 <div className="flex justify-between py-2 border-b border-gray-100">
                   <span className="font-medium">Price:</span>
                   <span className="text-muted-foreground">
-                    ${product.price}
+                    {formatPrice(Number(product.price))}
                   </span>
                 </div>
                 {product.originalPrice && (
                   <div className="flex justify-between py-2 border-b border-gray-100">
                     <span className="font-medium">Original Price:</span>
                     <span className="text-muted-foreground">
-                      ${product.originalPrice}
+                      {formatPrice(Number(product.originalPrice))}
                     </span>
                   </div>
                 )}
@@ -449,10 +451,12 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
                       {relatedProduct.name}
                     </h3>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">${relatedProduct.price}</span>
+                      <span className="font-bold">
+                        {formatPrice(Number(relatedProduct.price))}
+                      </span>
                       {relatedProduct.originalPrice && (
                         <span className="text-xs text-muted-foreground line-through">
-                          ${relatedProduct.originalPrice}
+                          {formatPrice(Number(relatedProduct.originalPrice))}
                         </span>
                       )}
                     </div>
