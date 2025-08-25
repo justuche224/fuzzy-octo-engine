@@ -4,12 +4,13 @@ import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
 import { authClient } from "@/lib/auth-client";
 import { Loader } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
   const [showSignIn, setShowSignIn] = useState(true);
-
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   if (isPending) {
@@ -20,7 +21,7 @@ export default function LoginPage() {
     );
   }
   if (session && session.user) {
-    router.replace("/dashboard");
+    router.replace(redirect || "/dashboard");
     return null;
   }
 
@@ -35,9 +36,15 @@ export default function LoginPage() {
       //   }}
     >
       {showSignIn ? (
-        <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+        <SignInForm
+          onSwitchToSignUp={() => setShowSignIn(false)}
+          redirect={redirect || "/dashboard"}
+        />
       ) : (
-        <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+        <SignUpForm
+          onSwitchToSignIn={() => setShowSignIn(true)}
+          redirect={redirect || "/dashboard"}
+        />
       )}
     </main>
   );

@@ -10,6 +10,7 @@ export interface CartItem {
   trackQuantity: boolean;
   inStock?: number;
   productSlug: string;
+  sellerId: string;
 }
 
 interface CartState {

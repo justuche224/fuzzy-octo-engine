@@ -15,6 +15,7 @@ const AddToCart = ({
     trackQuantity: boolean;
     inStock: number;
     images: { url: string }[];
+    sellerId: string;
   };
 }) => {
   const { items, addItem, removeItem, updateItemQuantity } = useCartStore();
@@ -37,6 +38,7 @@ const AddToCart = ({
       inStock: product?.inStock,
       productSlug: product.slug,
       trackQuantity: product.trackQuantity,
+      sellerId: product.sellerId,
     });
     toast.success("Item added to cart");
   };

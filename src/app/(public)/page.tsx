@@ -61,6 +61,7 @@ const Home = async () => {
             trackQuantity: product.inStock,
             inStock: product.quantity,
             images: product.images,
+            sellerId: product.sellerId,
           }}
         />
       </CardFooter>

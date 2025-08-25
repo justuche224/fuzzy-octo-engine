@@ -145,24 +145,39 @@ export const reviews = pgTable("reviews", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const orders = pgTable("orders", {
-  id: text("id").primaryKey(),
-  customerId: text("customer_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("pending"),
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
-  shipping: decimal("shipping", { precision: 10, scale: 2 }).default("0"),
-  shippingAddress: text("shipping_address"),
-  billingAddress: text("billing_address"),
-  paymentMethod: text("payment_method"),
-  paymentStatus: text("payment_status").default("pending"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
-});
+export const orders = pgTable(
+  "orders",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"),
+    paymentStatus: text("payment_status").default("pending"),
+    subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+    shipping: decimal("shipping", { precision: 10, scale: 2 }).default("0"),
+    total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+    shippingAddress: text("shipping_address"),
+    city: text("city"),
+    state: text("state"),
+    zip: text("zip"),
+    country: text("country"),
+    phone: text("phone"),
+    email: text("email"),
+    name: text("name"),
+    paymentReference: text("payment_reference").notNull().unique(),
+    paymentAccessCode: text("payment_access_code").notNull().unique(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("order_payment_reference_idx").on(table.paymentReference),
+    uniqueIndex("order_payment_access_code_idx").on(table.paymentAccessCode),
+  ]
+);
 
 export const orderItems = pgTable("order_items", {
   id: text("id").primaryKey(),

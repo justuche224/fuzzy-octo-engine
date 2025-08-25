@@ -183,6 +183,7 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
                   trackQuantity: product.inStock,
                   inStock: product.quantity,
                   images: product.images,
+                  sellerId: product.sellerId,
                 }}
               />
               <SaveProductButton productId={product.id} isSaved={isSaved} />

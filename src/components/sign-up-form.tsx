@@ -16,9 +16,11 @@ import { Eye, EyeOff } from "lucide-react";
 export default function SignUpForm({
   onSwitchToSignIn,
   className,
+  redirect,
   ...props
 }: {
   onSwitchToSignIn: () => void;
+  redirect: string;
 } & React.ComponentProps<"div">) {
   const router = useRouter();
   const { isPending } = authClient.useSession();
@@ -39,7 +41,7 @@ export default function SignUpForm({
         },
         {
           onSuccess: () => {
-            router.replace("/dashboard");
+            router.replace(redirect);
             toast.success("Sign up successful");
           },
           onError: (error) => {
