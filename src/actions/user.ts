@@ -9,6 +9,7 @@ import {
   productImages,
   orders,
   orderItems,
+  categories,
 } from "@/db/schema";
 import { userProfileSchema } from "@/types";
 import { serverAuth } from "@/lib/server-auth";
@@ -411,5 +412,204 @@ export const getDashboardSavedProducts = async () => {
   } catch (error) {
     console.error("Error fetching saved products stats:", error);
     throw new Error("Failed to fetch saved products statistics");
+  }
+};
+
+// Admin Functions
+const isAdmin = async () => {
+  const currentUser = await serverAuth();
+  if (!currentUser || currentUser.role !== "ADMIN") {
+    throw new Error("Unauthorized: Admin access required");
+  }
+  return currentUser;
+};
+
+export const getAdminStats = async () => {
+  await isAdmin();
+
+  try {
+    // Platform overview statistics
+    const [platformStats] = await db
+      .select({
+        totalUsers: sql<number>`COUNT(DISTINCT ${user.id})`,
+        totalSellers: sql<number>`COUNT(DISTINCT ${user.id}) FILTER (WHERE ${user.role} = 'SELLER' OR ${user.id} IN (SELECT DISTINCT ${products.sellerId} FROM ${products}))`,
+        totalAdmins: sql<number>`COUNT(DISTINCT ${user.id}) FILTER (WHERE ${user.role} = 'ADMIN')`,
+        totalProducts: sql<number>`(SELECT COUNT(*) FROM ${products})`,
+        totalOrders: sql<number>`(SELECT COUNT(*) FROM ${orders})`,
+        totalRevenue: sql<number>`(SELECT COALESCE(SUM(${orders.total}), 0) FROM ${orders} WHERE ${orders.paymentStatus} = 'paid')`,
+        totalCategories: sql<number>`(SELECT COUNT(*) FROM ${categories})`,
+        recentUsers: sql<number>`COUNT(DISTINCT ${user.id}) FILTER (WHERE ${user.createdAt} >= NOW() - INTERVAL '30 days')`,
+      })
+      .from(user);
+
+    return {
+      totalUsers: Number(platformStats?.totalUsers || 0),
+      totalSellers: Number(platformStats?.totalSellers || 0),
+      totalAdmins: Number(platformStats?.totalAdmins || 0),
+      totalProducts: Number(platformStats?.totalProducts || 0),
+      totalOrders: Number(platformStats?.totalOrders || 0),
+      totalRevenue: Number(platformStats?.totalRevenue || 0),
+      totalCategories: Number(platformStats?.totalCategories || 0),
+      recentUsers: Number(platformStats?.recentUsers || 0),
+    };
+  } catch (error) {
+    console.error("Error fetching admin stats:", error);
+    throw new Error("Failed to fetch admin statistics");
+  }
+};
+
+const getAllUsersSchema = z.object({
+  page: z.number().default(1),
+  limit: z.number().max(50).default(20),
+  search: z.string().optional(),
+  role: z.enum(["USER", "SELLER", "ADMIN"]).optional(),
+});
+
+export const getAllUsers = async (data: z.infer<typeof getAllUsersSchema>) => {
+  await isAdmin();
+
+  const validatedData = getAllUsersSchema.parse(data);
+  const { page, limit, search, role } = validatedData;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        image: user.image,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        productCount: sql<number>`(SELECT COUNT(*) FROM ${products} WHERE ${products.sellerId} = ${user.id})`,
+        orderCount: sql<number>`(SELECT COUNT(*) FROM ${orders} WHERE ${orders.userId} = ${user.id})`,
+      })
+      .from(user)
+      .$dynamic();
+
+    if (search) {
+      query = query.where(
+        sql`${user.name} ILIKE ${`%${search}%`} OR ${
+          user.email
+        } ILIKE ${`%${search}%`}`
+      );
+    }
+
+    if (role) {
+      query = query.where(eq(user.role, role));
+    }
+
+    const users = await query
+      .orderBy(desc(user.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get total count for pagination
+    let countQuery = db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(user)
+      .$dynamic();
+
+    if (search) {
+      countQuery = countQuery.where(
+        sql`${user.name} ILIKE ${`%${search}%`} OR ${
+          user.email
+        } ILIKE ${`%${search}%`}`
+      );
+    }
+
+    if (role) {
+      countQuery = countQuery.where(eq(user.role, role));
+    }
+
+    const [{ count }] = await countQuery;
+
+    return {
+      users,
+      totalCount: Number(count),
+      totalPages: Math.ceil(Number(count) / limit),
+      currentPage: page,
+    };
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw new Error("Failed to fetch users");
+  }
+};
+
+const updateUserRoleSchema = z.object({
+  userId: z.string(),
+  role: z.enum(["USER", "SELLER", "ADMIN"]),
+});
+
+export const updateUserRole = async (
+  data: z.infer<typeof updateUserRoleSchema>
+) => {
+  await isAdmin();
+
+  const { userId, role } = updateUserRoleSchema.parse(data);
+
+  try {
+    const [updatedUser] = await db
+      .update(user)
+      .set({
+        role,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return updatedUser;
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    throw new Error("Failed to update user role");
+  }
+};
+
+const toggleUserStatusSchema = z.object({
+  userId: z.string(),
+  emailVerified: z.boolean(),
+});
+
+export const toggleUserStatus = async (
+  data: z.infer<typeof toggleUserStatusSchema>
+) => {
+  await isAdmin();
+
+  const { userId, emailVerified } = toggleUserStatusSchema.parse(data);
+
+  try {
+    const [updatedUser] = await db
+      .update(user)
+      .set({
+        emailVerified,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return updatedUser;
+  } catch (error) {
+    console.error("Error toggling user status:", error);
+    throw new Error("Failed to update user status");
+  }
+};
+
+const deleteUserSchema = z.object({
+  userId: z.string(),
+});
+
+export const deleteUser = async (data: z.infer<typeof deleteUserSchema>) => {
+  await isAdmin();
+
+  const { userId } = deleteUserSchema.parse(data);
+
+  try {
+    await db.delete(user).where(eq(user.id, userId));
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw new Error("Failed to delete user");
   }
 };

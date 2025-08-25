@@ -843,3 +843,297 @@ export const getDashboardRecentActivity = async () => {
     throw new Error("Failed to fetch recent activity");
   }
 };
+
+// Admin Functions
+const isAdmin = async () => {
+  const user = await serverAuth();
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Unauthorized: Admin access required");
+  }
+  return user;
+};
+
+const getAllOrdersSchema = z.object({
+  page: z.number().default(1),
+  limit: z.number().max(50).default(20),
+  status: z.enum(["pending", "completed", "cancelled"]).optional(),
+  paymentStatus: z.enum(["pending", "paid", "failed"]).optional(),
+  search: z.string().optional(),
+});
+
+export const getAllOrders = async (
+  data: z.infer<typeof getAllOrdersSchema>
+) => {
+  await isAdmin();
+
+  const validatedData = getAllOrdersSchema.parse(data);
+  const { page, limit, status, paymentStatus, search } = validatedData;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = db
+      .select({
+        id: orders.id,
+        userId: orders.userId,
+        status: orders.status,
+        paymentStatus: orders.paymentStatus,
+        subtotal: orders.subtotal,
+        shipping: orders.shipping,
+        total: orders.total,
+        shippingAddress: orders.shippingAddress,
+        city: orders.city,
+        state: orders.state,
+        zip: orders.zip,
+        country: orders.country,
+        phone: orders.phone,
+        email: orders.email,
+        name: orders.name,
+        notes: orders.notes,
+        paymentReference: orders.paymentReference,
+        createdAt: orders.createdAt,
+        updatedAt: orders.updatedAt,
+        customer: {
+          id: sql<string>`"customer"."id"`,
+          name: sql<string>`"customer"."name"`,
+          email: sql<string>`"customer"."email"`,
+        },
+        itemCount: sql<number>`(SELECT COUNT(*) FROM ${orderItems} WHERE ${orderItems.orderId} = ${orders.id})`,
+      })
+      .from(orders)
+      .leftJoin(
+        sql`"user" as "customer"`,
+        eq(orders.userId, sql`"customer"."id"`)
+      )
+      .$dynamic();
+
+    if (status) {
+      query = query.where(eq(orders.status, status));
+    }
+
+    if (paymentStatus) {
+      query = query.where(eq(orders.paymentStatus, paymentStatus));
+    }
+
+    if (search) {
+      query = query.where(
+        sql`${orders.name} ILIKE ${`%${search}%`} OR ${
+          orders.email
+        } ILIKE ${`%${search}%`} OR ${orders.id} ILIKE ${`%${search}%`}`
+      );
+    }
+
+    const ordersData = await query
+      .orderBy(desc(orders.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get total count for pagination
+    let countQuery = db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(orders)
+      .$dynamic();
+
+    if (status) {
+      countQuery = countQuery.where(eq(orders.status, status));
+    }
+
+    if (paymentStatus) {
+      countQuery = countQuery.where(eq(orders.paymentStatus, paymentStatus));
+    }
+
+    if (search) {
+      countQuery = countQuery.where(
+        sql`${orders.name} ILIKE ${`%${search}%`} OR ${
+          orders.email
+        } ILIKE ${`%${search}%`} OR ${orders.id} ILIKE ${`%${search}%`}`
+      );
+    }
+
+    const [{ count }] = await countQuery;
+
+    return {
+      orders: ordersData,
+      totalCount: Number(count),
+      totalPages: Math.ceil(Number(count) / limit),
+      currentPage: page,
+    };
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    throw new Error("Failed to fetch orders");
+  }
+};
+
+const updateOrderStatusSchema = z.object({
+  orderId: z.string(),
+  status: z.enum(["pending", "completed", "cancelled"]),
+});
+
+export const updateOrderStatus = async (
+  data: z.infer<typeof updateOrderStatusSchema>
+) => {
+  await isAdmin();
+
+  const { orderId, status } = updateOrderStatusSchema.parse(data);
+
+  try {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    throw new Error("Failed to update order status");
+  }
+};
+
+const updatePaymentStatusSchema = z.object({
+  orderId: z.string(),
+  paymentStatus: z.enum(["pending", "paid", "failed"]),
+});
+
+export const updatePaymentStatus = async (
+  data: z.infer<typeof updatePaymentStatusSchema>
+) => {
+  await isAdmin();
+
+  const { orderId, paymentStatus } = updatePaymentStatusSchema.parse(data);
+
+  try {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({
+        paymentStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    throw new Error("Failed to update payment status");
+  }
+};
+
+export const getOrderDetails = async (orderId: string) => {
+  await isAdmin();
+
+  try {
+    const orderDetails = await db
+      .select({
+        orderId: orders.id,
+        orderStatus: orders.status,
+        orderPaymentStatus: orders.paymentStatus,
+        orderTotal: orders.total,
+        orderSubtotal: orders.subtotal,
+        orderShipping: orders.shipping,
+        orderShippingAddress: orders.shippingAddress,
+        orderCity: orders.city,
+        orderState: orders.state,
+        orderZip: orders.zip,
+        orderCountry: orders.country,
+        orderPhone: orders.phone,
+        orderEmail: orders.email,
+        orderName: orders.name,
+        orderNotes: orders.notes,
+        orderPaymentReference: orders.paymentReference,
+        orderCreatedAt: orders.createdAt,
+        orderUpdatedAt: orders.updatedAt,
+        customer: {
+          id: sql<string>`"customer"."id"`,
+          name: sql<string>`"customer"."name"`,
+          email: sql<string>`"customer"."email"`,
+        },
+        // Order items
+        itemId: orderItems.id,
+        itemQuantity: orderItems.quantity,
+        itemPrice: orderItems.price,
+        itemTotal: orderItems.total,
+        itemVariant: orderItems.variant,
+        itemCreatedAt: orderItems.createdAt,
+        product: {
+          id: products.id,
+          name: products.name,
+          description: products.description,
+          price: products.price,
+          unit: products.unit,
+          brand: products.brand,
+        },
+        productImage: productImages.url,
+        seller: {
+          id: sql<string>`"seller"."id"`,
+          name: sql<string>`"seller"."name"`,
+          email: sql<string>`"seller"."email"`,
+        },
+      })
+      .from(orders)
+      .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .leftJoin(
+        productImages,
+        and(
+          eq(products.id, productImages.productId),
+          eq(productImages.isPrimary, true)
+        )
+      )
+      .leftJoin(
+        sql`"user" as "customer"`,
+        eq(orders.userId, sql`"customer"."id"`)
+      )
+      .leftJoin(
+        sql`"user" as "seller"`,
+        eq(orderItems.sellerId, sql`"seller"."id"`)
+      )
+      .where(eq(orders.id, orderId))
+      .orderBy(orderItems.createdAt);
+
+    if (orderDetails.length === 0) {
+      throw new Error("Order not found");
+    }
+
+    const firstRow = orderDetails[0];
+    const items = orderDetails.map((row) => ({
+      id: row.itemId,
+      quantity: row.itemQuantity,
+      price: row.itemPrice,
+      total: row.itemTotal,
+      variant: row.itemVariant,
+      createdAt: row.itemCreatedAt,
+      product: row.product,
+      productImage: row.productImage,
+      seller: row.seller,
+    }));
+
+    return {
+      orderId: firstRow.orderId,
+      status: firstRow.orderStatus,
+      paymentStatus: firstRow.orderPaymentStatus,
+      total: firstRow.orderTotal,
+      subtotal: firstRow.orderSubtotal,
+      shipping: firstRow.orderShipping,
+      shippingAddress: firstRow.orderShippingAddress,
+      city: firstRow.orderCity,
+      state: firstRow.orderState,
+      zip: firstRow.orderZip,
+      country: firstRow.orderCountry,
+      phone: firstRow.orderPhone,
+      email: firstRow.orderEmail,
+      name: firstRow.orderName,
+      notes: firstRow.orderNotes,
+      paymentReference: firstRow.orderPaymentReference,
+      createdAt: firstRow.orderCreatedAt,
+      updatedAt: firstRow.orderUpdatedAt,
+      customer: firstRow.customer,
+      items,
+    };
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    throw new Error("Failed to fetch order details");
+  }
+};

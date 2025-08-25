@@ -21,7 +21,11 @@ export default function LoginPage() {
     );
   }
   if (session && session.user) {
-    router.replace(redirect || "/dashboard");
+    if (session.user.role === "ADMIN") {
+      router.replace(redirect || "/admin");
+    } else {
+      router.replace(redirect || "/dashboard");
+    }
     return null;
   }
 
