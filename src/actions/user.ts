@@ -12,7 +12,7 @@ import {
 } from "@/db/schema";
 import { userProfileSchema } from "@/types";
 import { serverAuth } from "@/lib/server-auth";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const getUserProfile = async () => {
@@ -331,4 +331,85 @@ export const getUserOrderDetails = async (orderId: string) => {
     ...order,
     items,
   };
+};
+
+export const getDashboardStats = async () => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // Get user's products count
+    const [productStats] = await db
+      .select({
+        totalProducts: sql<number>`COUNT(*)`,
+        activeProducts: sql<number>`COUNT(*) FILTER (WHERE ${products.inStock} = true)`,
+        outOfStockProducts: sql<number>`COUNT(*) FILTER (WHERE ${products.inStock} = false)`,
+      })
+      .from(products)
+      .where(eq(products.sellerId, currentUser.id));
+
+    return {
+      totalProducts: Number(productStats?.totalProducts || 0),
+      activeProducts: Number(productStats?.activeProducts || 0),
+      outOfStockProducts: Number(productStats?.outOfStockProducts || 0),
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    throw new Error("Failed to fetch dashboard statistics");
+  }
+};
+
+export const getDashboardPurchases = async () => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // Get user's purchase statistics
+    const [purchaseStats] = await db
+      .select({
+        totalOrders: sql<number>`COUNT(DISTINCT ${orders.id})`,
+        totalSpent: sql<number>`COALESCE(SUM(${orders.total}), 0)`,
+        pendingOrders: sql<number>`COUNT(DISTINCT ${orders.id}) FILTER (WHERE ${orders.status} = 'pending')`,
+        completedOrders: sql<number>`COUNT(DISTINCT ${orders.id}) FILTER (WHERE ${orders.status} = 'completed')`,
+      })
+      .from(orders)
+      .where(eq(orders.userId, currentUser.id));
+
+    return {
+      totalOrders: Number(purchaseStats?.totalOrders || 0),
+      totalSpent: Number(purchaseStats?.totalSpent || 0),
+      pendingOrders: Number(purchaseStats?.pendingOrders || 0),
+      completedOrders: Number(purchaseStats?.completedOrders || 0),
+    };
+  } catch (error) {
+    console.error("Error fetching purchase stats:", error);
+    throw new Error("Failed to fetch purchase statistics");
+  }
+};
+
+export const getDashboardSavedProducts = async () => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    const [savedStats] = await db
+      .select({
+        totalSaved: sql<number>`COUNT(*)`,
+      })
+      .from(savedProducts)
+      .where(eq(savedProducts.userId, currentUser.id));
+
+    return {
+      totalSaved: Number(savedStats?.totalSaved || 0),
+    };
+  } catch (error) {
+    console.error("Error fetching saved products stats:", error);
+    throw new Error("Failed to fetch saved products statistics");
+  }
 };

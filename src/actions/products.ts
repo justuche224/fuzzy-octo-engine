@@ -754,3 +754,92 @@ export const getSellerOrderDetails = async (
     isPartialOrder: true, // This indicates it's a multi-vendor order showing only seller's items
   };
 };
+
+export const getDashboardSalesStats = async () => {
+  const user = await serverAuth();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // Get sales statistics for the seller
+    const [salesStats] = await db
+      .select({
+        totalSales: sql<number>`COALESCE(SUM(${orderItems.total}), 0)`,
+        totalOrders: sql<number>`COUNT(DISTINCT ${orderItems.orderId})`,
+        totalItemsSold: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`,
+        pendingSales: sql<number>`COALESCE(SUM(${orderItems.total}) FILTER (WHERE ${orders.status} = 'pending'), 0)`,
+        completedSales: sql<number>`COALESCE(SUM(${orderItems.total}) FILTER (WHERE ${orders.status} = 'completed'), 0)`,
+        paidSales: sql<number>`COALESCE(SUM(${orderItems.total}) FILTER (WHERE ${orders.paymentStatus} = 'paid'), 0)`,
+      })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(eq(orderItems.sellerId, user.id));
+
+    // Get recent sales (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [recentSalesStats] = await db
+      .select({
+        recentSales: sql<number>`COALESCE(SUM(${orderItems.total}), 0)`,
+        recentOrders: sql<number>`COUNT(DISTINCT ${orderItems.orderId})`,
+      })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(
+        and(
+          eq(orderItems.sellerId, user.id),
+          sql`${orders.createdAt} >= ${thirtyDaysAgo.toISOString()}`
+        )
+      );
+
+    return {
+      totalSales: Number(salesStats?.totalSales || 0),
+      totalOrders: Number(salesStats?.totalOrders || 0),
+      totalItemsSold: Number(salesStats?.totalItemsSold || 0),
+      pendingSales: Number(salesStats?.pendingSales || 0),
+      completedSales: Number(salesStats?.completedSales || 0),
+      paidSales: Number(salesStats?.paidSales || 0),
+      recentSales: Number(recentSalesStats?.recentSales || 0),
+      recentOrders: Number(recentSalesStats?.recentOrders || 0),
+    };
+  } catch (error) {
+    console.error("Error fetching sales stats:", error);
+    throw new Error("Failed to fetch sales statistics");
+  }
+};
+
+export const getDashboardRecentActivity = async () => {
+  const user = await serverAuth();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  try {
+    // Get recent orders containing seller's items
+    const recentActivity = await db
+      .select({
+        orderId: orders.id,
+        orderStatus: orders.status,
+        orderTotal: orders.total,
+        customerName: orders.name,
+        customerEmail: orders.email,
+        createdAt: orders.createdAt,
+        itemTotal: orderItems.total,
+        itemQuantity: orderItems.quantity,
+        productName: products.name,
+      })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.sellerId, user.id))
+      .orderBy(desc(orders.createdAt))
+      .limit(10);
+
+    return recentActivity;
+  } catch (error) {
+    console.error("Error fetching recent activity:", error);
+    throw new Error("Failed to fetch recent activity");
+  }
+};
