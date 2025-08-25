@@ -197,6 +197,15 @@ export const orderItems = pgTable("order_items", {
   createdAt: timestamp("created_at").notNull(),
 });
 
+export type Order = typeof orders.$inferSelect;
+export type OrderWithItemCount = Order & {
+  itemCount: number;
+};
+export type OrderItem = typeof orderItems.$inferSelect;
+export type FullOrder = Order & {
+  items: OrderItem[];
+};
+
 export const wishlistItems = pgTable("wishlist_items", {
   id: text("id").primaryKey(),
   userId: text("user_id")

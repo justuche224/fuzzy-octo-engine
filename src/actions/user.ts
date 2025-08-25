@@ -7,6 +7,8 @@ import {
   userProfiles,
   products,
   productImages,
+  orders,
+  orderItems,
 } from "@/db/schema";
 import { userProfileSchema } from "@/types";
 import { serverAuth } from "@/lib/server-auth";
@@ -280,5 +282,53 @@ export const getSavedProducts = async (
     totalCount: totalCount.length,
     totalPages: Math.ceil(totalCount.length / limit),
     currentPage: page,
+  };
+};
+
+export const getUserOrderDetails = async (orderId: string) => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  const orderWithItems = await db
+    .select({
+      order: orders,
+      items: {
+        id: orderItems.id,
+        quantity: orderItems.quantity,
+        price: orderItems.price,
+        total: orderItems.total,
+        variant: orderItems.variant,
+        productName: products.name,
+        productImage: productImages.url,
+        productBrand: products.brand,
+        productUnit: products.unit,
+      },
+    })
+    .from(orders)
+    .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+    .leftJoin(products, eq(orderItems.productId, products.id))
+    .leftJoin(
+      productImages,
+      and(
+        eq(products.id, productImages.productId),
+        eq(productImages.isPrimary, true)
+      )
+    )
+    .where(and(eq(orders.id, orderId), eq(orders.userId, currentUser.id)));
+
+  if (!orderWithItems.length) {
+    throw new Error("Order not found");
+  }
+
+  const order = orderWithItems[0].order;
+  const items = orderWithItems
+    .filter((item) => item.items.id && item.items.productName)
+    .map((item) => item.items);
+
+  return {
+    ...order,
+    items,
   };
 };
