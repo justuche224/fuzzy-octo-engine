@@ -211,14 +211,14 @@ const SellPage = ({ userId }: { userId: string }) => {
       name: "",
       description: "",
       price: "",
-      originalPrice: "",
+      originalPrice: undefined,
       quantity: "",
       unit: "",
       categoryId: "",
-      brand: "",
-      weight: "",
-      dimensions: "",
-      badge: "",
+      brand: undefined,
+      weight: undefined,
+      dimensions: undefined,
+      badge: undefined,
       images: [],
     },
   });
@@ -234,17 +234,16 @@ const SellPage = ({ userId }: { userId: string }) => {
       await createProduct({
         name: values.name,
         description: values.description,
-        price: parseFloat(values.price),
-        originalPrice: values.originalPrice
-          ? parseFloat(values.originalPrice)
-          : undefined,
+        price: values.price,
+        originalPrice:
+          values.originalPrice === "" ? undefined : values.originalPrice,
         quantity: parseInt(values.quantity),
         unit: values.unit,
         categoryId: values.categoryId,
-        brand: values.brand,
-        weight: values.weight,
-        dimensions: values.dimensions,
-        badge: values.badge,
+        brand: values.brand || undefined,
+        weight: values.weight || undefined,
+        dimensions: values.dimensions || undefined,
+        badge: values.badge || undefined,
         images: uploadedImages,
       });
 
@@ -315,39 +314,64 @@ const SellPage = ({ userId }: { userId: string }) => {
                   <Loader className="animate-spin" />
                 </div>
               ) : userProducts && userProducts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {userProducts.map((product) => (
-                    <Card
+                    // <Card
+                    //   key={product.id}
+                    //   className="p-4"
+                    //   style={{
+                    //     backgroundImage: product.images[0]
+                    //       ? `url(${product.images[0].url})`
+                    //       : undefined,
+                    //     backgroundSize: "cover",
+                    //     backgroundPosition: "center",
+                    //     backgroundRepeat: "no-repeat",
+                    //   }}
+                    // >
+                    //   <h3 className="font-semibold">{product.name}</h3>
+                    //   <p className="text-sm text-muted-foreground mb-2">
+                    //     {product.description.substring(0, 100)}...
+                    //   </p>
+                    //   <div className="flex justify-between items-center">
+                    //     <span className="font-bold">
+                    //       {formatPrice(Number(product.price))}
+                    //     </span>
+                    //     <span
+                    //       className={`text-sm ${
+                    //         product.inStock ? "text-green-600" : "text-red-600"
+                    //       }`}
+                    //     >
+                    //       {product.inStock
+                    //         ? `${product.quantity} in stock`
+                    //         : "Out of stock"}
+                    //     </span>
+                    //   </div>
+                    // </Card>
+                    <div
                       key={product.id}
-                      className="p-4"
-                      style={{
-                        backgroundImage: product.images[0]
-                          ? `url(${product.images[0].url})`
-                          : undefined,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                      }}
+                      className="w-full h-full shadow-md rounded-md py-2 bg-background flex flex-col"
                     >
-                      <h3 className="font-semibold">{product.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {product.description.substring(0, 100)}...
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold">
-                          {formatPrice(Number(product.price))}
-                        </span>
-                        <span
-                          className={`text-sm ${
-                            product.inStock ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {product.inStock
-                            ? `${product.quantity} in stock`
-                            : "Out of stock"}
-                        </span>
-                      </div>
-                    </Card>
+                      <CardHeader className="flex-1">
+                        <Image
+                          src={product.images[0].url}
+                          alt={product.name}
+                          width={100}
+                          height={100}
+                          className="w-full h-full object-cover"
+                        />
+                      </CardHeader>
+                      <CardContent>
+                        <CardTitle>{product.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                          {product.description}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold">
+                            {formatPrice(Number(product.price))}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </div>
                   ))}
                 </div>
               ) : (

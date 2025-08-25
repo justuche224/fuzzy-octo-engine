@@ -30,7 +30,7 @@ export default function SignInForm({
       password: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signIn.email(
+      const { error } = await authClient.signIn.email(
         {
           email: value.email,
           password: value.password,
@@ -45,6 +45,9 @@ export default function SignInForm({
           },
         }
       );
+      if (error) {
+        toast.error(error.message);
+      }
     },
     validators: {
       onSubmit: z.object({

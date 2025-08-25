@@ -228,16 +228,17 @@ export const createProduct = async (data: CreateProductSchema) => {
       id: productId,
       name: validatedData.name,
       description: validatedData.description,
-      price: validatedData.price.toString(),
-      originalPrice: validatedData.originalPrice?.toString(),
+      price: validatedData.price,
+      originalPrice:
+        validatedData.originalPrice === "" ? null : validatedData.originalPrice,
       quantity: validatedData.quantity,
       unit: validatedData.unit,
       categoryId: validatedData.categoryId,
       sellerId: user.id,
-      brand: validatedData.brand,
-      weight: validatedData.weight,
-      dimensions: validatedData.dimensions,
-      badge: validatedData.badge,
+      brand: validatedData.brand || null,
+      weight: validatedData.weight || null,
+      dimensions: validatedData.dimensions || null,
+      badge: validatedData.badge || null,
       createdAt: now,
       updatedAt: now,
     })
@@ -298,8 +299,13 @@ export const updateProduct = async (data: UpdateProductSchema) => {
     .update(products)
     .set({
       ...updateData,
-      price: updateData.price?.toString(),
-      originalPrice: updateData.originalPrice?.toString(),
+      price: updateData.price,
+      originalPrice:
+        updateData.originalPrice === "" ? null : updateData.originalPrice,
+      brand: updateData.brand || null,
+      weight: updateData.weight || null,
+      dimensions: updateData.dimensions || null,
+      badge: updateData.badge || null,
       updatedAt: now,
     })
     .where(eq(products.id, id))

@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,7 +29,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, showAddToCart = true }: ProductCardProps) => {
   return (
-    <Card className="group cursor-pointer hover:shadow-lg transition-all duration-200">
+    <div className="group cursor-pointer hover:shadow-lg transition-all duration-200 bg-card rounded-lg">
       <Link href={`/item/${product.id}`}>
         <CardContent className="p-0">
           <div className="aspect-square relative bg-gray-100 overflow-hidden rounded-t-lg">
@@ -110,7 +112,7 @@ const ProductCard = ({ product, showAddToCart = true }: ProductCardProps) => {
           </div>
         </CardContent>
       </Link>
-    </Card>
+    </div>
   );
 };
 

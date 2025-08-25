@@ -3,11 +3,8 @@ import { z } from "zod";
 export const createProductSchema = z.object({
   name: z.string().min(2),
   description: z.string().min(10),
-  price: z.string().transform((val) => parseFloat(val)),
-  originalPrice: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseFloat(val) : undefined)),
+  price: z.string(),
+  originalPrice: z.string().optional(),
   quantity: z.number().int().min(0),
   unit: z.string().min(1),
   categoryId: z.string(),

@@ -1,8 +1,69 @@
 import React from "react";
 import { InputWithButton } from "@/components/search-bar";
 import Image from "next/image";
+import Link from "next/link";
+import { getProducts } from "@/actions/products";
+import {
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import formatPrice from "@/lib/format-price";
+import { Button } from "@/components/ui/button";
 
-const Home = () => {
+const Home = async () => {
+  const dealsData = await getProducts({
+    page: 1,
+    limit: 12,
+    sortBy: "featured",
+  });
+
+  const newArrivalsData = await getProducts({
+    page: 1,
+    limit: 12,
+    sortBy: "newest",
+  });
+
+  const ProductCard = ({
+    product,
+  }: {
+    product: (typeof dealsData.items)[0];
+  }) => (
+    <div
+      key={product.id}
+      className="w-full h-full shadow-md rounded-md py-2 flex flex-col bg-card hover:bg-card/80 transition-all duration-300 group px-0"
+    >
+      <CardHeader className="flex-1">
+        <Link href={`/item/${product.id}`}>
+          <Image
+            src={product.images[0].url}
+            alt={product.name}
+            width={100}
+            height={100}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 aspect-square"
+          />
+        </Link>
+      </CardHeader>
+      <CardContent>
+        <Link href={`/item/${product.id}`}>
+          <CardTitle className="line-clamp-1">{product.name}</CardTitle>
+          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+            {product.description}
+          </p>
+          <div className="flex justify-between items-center">
+            <span className="font-bold">
+              {formatPrice(Number(product.price))}
+            </span>
+          </div>
+        </Link>
+      </CardContent>
+      <CardFooter>
+        <Button className="w-full">Add to Cart</Button>
+      </CardFooter>
+    </div>
+  );
+
   return (
     <section>
       <div className="md:hidden w-full flex justify-center">
@@ -12,26 +73,8 @@ const Home = () => {
         <h2 className="text-2xl font-bold my-4">Today&apos;s Deals</h2>
         <div>
           <div className="grid gap-4 max-sm:[grid-template-columns:repeat(auto-fill,minmax(130px,1fr))] [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div key={index} className="aspect-square rounded-xl relative">
-                <Image
-                  src="/image.png"
-                  alt="Deal 1"
-                  fill
-                  className="object-cover h-[90%] rounded-xl"
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 text-white rounded-xl">
-                  <p className="text-md font-bold line-clamp-1">Product Name</p>
-                  <p className="text-sm line-clamp-2">
-                    Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                    Inventore laboriosam reprehenderit esse mollitia officia
-                    accusantium aliquid quidem expedita commodi dolor? Rem
-                    doloribus esse error qui rerum quisquam dolor aspernatur
-                    eum?
-                  </p>
-                  <p className="text-md font-bold line-clamp-1">$100.00</p>
-                </div>
-              </div>
+            {dealsData.items.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
@@ -40,26 +83,8 @@ const Home = () => {
         <h2 className="text-2xl font-bold my-4">New Arrivals</h2>
         <div>
           <div className="grid gap-4 max-sm:[grid-template-columns:repeat(auto-fill,minmax(130px,1fr))] [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div key={index} className="aspect-square rounded-xl relative">
-                <Image
-                  src="/image.png"
-                  alt="Deal 1"
-                  fill
-                  className="object-cover h-[90%] rounded-xl"
-                />
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 text-white rounded-xl">
-                  <p className="text-md font-bold line-clamp-1">Product Name</p>
-                  <p className="text-sm line-clamp-2">
-                    Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                    Inventore laboriosam reprehenderit esse mollitia officia
-                    accusantium aliquid quidem expedita commodi dolor? Rem
-                    doloribus esse error qui rerum quisquam dolor aspernatur
-                    eum?
-                  </p>
-                  <p className="text-md font-bold line-clamp-1">$100.00</p>
-                </div>
-              </div>
+            {newArrivalsData.items.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>

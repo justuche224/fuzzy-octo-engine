@@ -18,6 +18,8 @@ import {
   IconCash,
   IconHeart,
   IconPlus,
+  IconHome,
+  IconHome2,
 } from "@tabler/icons-react";
 
 // import { NavDocuments } from "@/components/nav-documents";
@@ -34,16 +36,30 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { usePathname, useSearchParams } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { data: session, isPending, error } = authClient.useSession();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   console.log(`${pathname}?page=${searchParams.get("page")}`);
   const data = {
     user: {
-      name: "shadcn",
-      email: "m@example.com",
-      avatar: "/avatars/shadcn.jpg",
+      name: isPending
+        ? "Loading..."
+        : error
+        ? "Error"
+        : session?.user?.name || "Guest",
+      email: isPending
+        ? "Loading..."
+        : error
+        ? "Error"
+        : session?.user?.email || "Guest",
+      avatar: isPending
+        ? "Loading..."
+        : error
+        ? "Error"
+        : session?.user?.image || "/avatars/shadcn.jpg",
     },
     navMain: [
       {
@@ -69,6 +85,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           searchParams.get("page") === "add",
       },
       {
+        title: "My Store View",
+        url: isPending ? "#" : error ? "#" : `/seller/${session?.user?.id}`,
+        icon: IconHome2,
+        isActive:
+          isPending || error
+            ? false
+            : pathname === `/seller/${session?.user?.id}`,
+      },
+      {
         title: "My Sales",
         url: "/dashboard/my-listings?page=orders",
         icon: IconChartBar,
@@ -87,6 +112,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: "/dashboard/my-favorites",
         icon: IconHeart,
         isActive: pathname === "/dashboard/my-favorites",
+      },
+      {
+        title: "Home",
+        url: "/",
+        icon: IconHome,
+        isActive: pathname === "/",
       },
     ],
     navClouds: [
