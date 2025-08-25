@@ -19,7 +19,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+function AppSidebarContent({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
   const brand = searchParams.get("brand");
@@ -269,5 +269,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  return (
+    <React.Suspense fallback={<div className="p-4">Loading...</div>}>
+      <AppSidebarContent {...props} />
+    </React.Suspense>
   );
 }

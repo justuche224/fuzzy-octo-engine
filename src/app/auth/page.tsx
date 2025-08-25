@@ -5,9 +5,9 @@ import SignUpForm from "@/components/sign-up-form";
 import { authClient } from "@/lib/auth-client";
 import { Loader } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 
-export default function LoginPage() {
+function LoginContent() {
   const [showSignIn, setShowSignIn] = useState(true);
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
@@ -51,5 +51,19 @@ export default function LoginPage() {
         />
       )}
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-screen">
+          <Loader className="animate-spin" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import { CheckCircle } from "lucide-react";
@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export default function ConfirmedPage() {
+function ConfirmedContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const [confettiTriggered, setConfettiTriggered] = useState(false);
@@ -107,5 +107,19 @@ export default function ConfirmedPage() {
         </Card>
       </div>
     </section>
+  );
+}
+
+export default function ConfirmedPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="flex min-h-screen items-center justify-center">
+          Loading...
+        </section>
+      }
+    >
+      <ConfirmedContent />
+    </Suspense>
   );
 }

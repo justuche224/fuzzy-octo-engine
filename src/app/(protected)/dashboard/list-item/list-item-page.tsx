@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Banknote, X, Loader } from "lucide-react";
+import { Plus, Banknote, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -72,6 +72,7 @@ interface Category {
 }
 
 const ListItemPage = ({ userId }: { userId: string }) => {
+  console.log(userId);
   const router = useRouter();
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
