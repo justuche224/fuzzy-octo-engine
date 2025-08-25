@@ -15,7 +15,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { InputWithButton } from "./search-bar";
+// import { InputWithButton } from "./search-bar";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -232,9 +232,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarMenu className="hidden md:block w-full">
+        {/* <SidebarMenu className="hidden md:block w-full">
           <InputWithButton />
-        </SidebarMenu>
+        </SidebarMenu> */}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -271,5 +271,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   );
 }
-
-
