@@ -19,6 +19,7 @@ import UserMenu from "@/components/user-menu";
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider
+      defaultOpen={false}
       style={
         {
           "--sidebar-width": "21rem",

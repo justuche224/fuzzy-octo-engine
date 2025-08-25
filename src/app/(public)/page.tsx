@@ -19,12 +19,6 @@ const Home = async () => {
     sortBy: "featured",
   });
 
-  const newArrivalsData = await getProducts({
-    page: 1,
-    limit: 12,
-    sortBy: "newest",
-  });
-
   const ProductCard = ({
     product,
   }: {
@@ -65,8 +59,23 @@ const Home = async () => {
   );
 
   return (
-    <section>
-      <div className="md:hidden w-full flex justify-center">
+    <section className="container mx-auto max-w-7xl px-2">
+      <div className="mb-4 text-center">
+        <h1 className="text-2xl lg:text-4xl font-bold my-4">
+          Welcome to the Milky Way Marketplace
+        </h1>
+        <p className="text-muted-foreground">
+          Explore our wide range of products and find the best deals for you.
+        </p>
+        <p className="text-muted-foreground">
+          To list a product visit the{" "}
+          <Link href="/auth" className="text-primary">
+            Seller Registration
+          </Link>{" "}
+          page.
+        </p>
+      </div>
+      <div className="w-full flex justify-center mb-4">
         <InputWithButton />
       </div>
       <div>
@@ -74,16 +83,6 @@ const Home = async () => {
         <div>
           <div className="grid gap-4 max-sm:[grid-template-columns:repeat(auto-fill,minmax(130px,1fr))] [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
             {dealsData.items.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      </div>
-      <div>
-        <h2 className="text-2xl font-bold my-4">New Arrivals</h2>
-        <div>
-          <div className="grid gap-4 max-sm:[grid-template-columns:repeat(auto-fill,minmax(130px,1fr))] [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
-            {newArrivalsData.items.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
