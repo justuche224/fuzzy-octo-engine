@@ -381,7 +381,7 @@ export const createReview = async (
     .innerJoin(orders, eq(orderItems.orderId, orders.id))
     .where(
       and(
-        eq(orders.customerId, user.id),
+        eq(orders.userId, user.id),
         eq(orderItems.productId, validatedData.productId)
       )
     )
@@ -448,45 +448,309 @@ export const getSellerOrders = async (
   const { page, limit } = validatedData;
   const offset = (page - 1) * limit;
 
-  const sellerOrders = await db
+  // First, get all order IDs that contain the seller's items, ordered by most recent order creation
+  const orderIdsWithSellerItems = await db
     .select({
-      id: orderItems.id,
       orderId: orderItems.orderId,
-      quantity: orderItems.quantity,
-      price: orderItems.price,
-      total: orderItems.total,
-      variant: orderItems.variant,
-      createdAt: orderItems.createdAt,
-      product: {
-        id: products.id,
-        name: products.name,
-        price: products.price,
-      },
-      order: {
-        id: orders.id,
-        status: orders.status,
-        paymentStatus: orders.paymentStatus,
-        shippingAddress: orders.shippingAddress,
-        notes: orders.notes,
-        createdAt: orders.createdAt,
-      },
+      orderCreatedAt: orders.createdAt,
+    })
+    .from(orderItems)
+    .innerJoin(orders, eq(orderItems.orderId, orders.id))
+    .where(eq(orderItems.sellerId, user.id))
+    .groupBy(orderItems.orderId, orders.createdAt)
+    .orderBy(desc(orders.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  if (orderIdsWithSellerItems.length === 0) {
+    return [];
+  }
+
+  const orderIds = orderIdsWithSellerItems.map((item) => item.orderId);
+
+  // Get detailed order information with only the seller's items
+  const sellerOrderDetails = await db
+    .select({
+      orderId: orders.id,
+      orderStatus: orders.status,
+      orderPaymentStatus: orders.paymentStatus,
+      orderTotal: orders.total,
+      orderSubtotal: orders.subtotal,
+      orderShipping: orders.shipping,
+      orderShippingAddress: orders.shippingAddress,
+      orderCity: orders.city,
+      orderState: orders.state,
+      orderZip: orders.zip,
+      orderCountry: orders.country,
+      orderPhone: orders.phone,
+      orderEmail: orders.email,
+      orderName: orders.name,
+      orderNotes: orders.notes,
+      orderCreatedAt: orders.createdAt,
+      orderUpdatedAt: orders.updatedAt,
       customer: {
         id: sql<string>`"customer"."id"`,
         name: sql<string>`"customer"."name"`,
         email: sql<string>`"customer"."email"`,
       },
+      // Seller's items in this order
+      itemId: orderItems.id,
+      itemQuantity: orderItems.quantity,
+      itemPrice: orderItems.price,
+      itemTotal: orderItems.total,
+      itemVariant: orderItems.variant,
+      itemCreatedAt: orderItems.createdAt,
+      product: {
+        id: products.id,
+        name: products.name,
+        price: products.price,
+        unit: products.unit,
+        brand: products.brand,
+      },
+      productImage: productImages.url,
     })
-    .from(orderItems)
+    .from(orders)
+    .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
     .innerJoin(products, eq(orderItems.productId, products.id))
-    .innerJoin(orders, eq(orderItems.orderId, orders.id))
+    .leftJoin(
+      productImages,
+      and(
+        eq(products.id, productImages.productId),
+        eq(productImages.isPrimary, true)
+      )
+    )
     .leftJoin(
       sql`"user" as "customer"`,
-      eq(orders.customerId, sql`"customer"."id"`)
+      eq(orders.userId, sql`"customer"."id"`)
     )
-    .where(eq(orderItems.sellerId, user.id))
-    .orderBy(desc(orderItems.createdAt))
-    .limit(limit)
-    .offset(offset);
+    .where(and(inArray(orders.id, orderIds), eq(orderItems.sellerId, user.id)))
+    .orderBy(desc(orders.createdAt));
 
-  return sellerOrders;
+  // Group by order ID
+  const groupedOrders = sellerOrderDetails.reduce(
+    (acc, row) => {
+      const orderId = row.orderId;
+
+      if (!acc[orderId]) {
+        acc[orderId] = {
+          orderId: row.orderId,
+          status: row.orderStatus,
+          paymentStatus: row.orderPaymentStatus,
+          total: row.orderTotal,
+          subtotal: row.orderSubtotal,
+          shipping: row.orderShipping || "0",
+          shippingAddress: row.orderShippingAddress,
+          city: row.orderCity,
+          state: row.orderState,
+          zip: row.orderZip,
+          country: row.orderCountry,
+          phone: row.orderPhone,
+          email: row.orderEmail,
+          name: row.orderName,
+          notes: row.orderNotes,
+          createdAt: row.orderCreatedAt,
+          updatedAt: row.orderUpdatedAt,
+          customer: row.customer,
+          items: [],
+          sellerTotal: 0,
+          sellerItemCount: 0,
+        };
+      }
+
+      if (row.itemId) {
+        acc[orderId].items.push({
+          id: row.itemId,
+          quantity: row.itemQuantity,
+          price: row.itemPrice,
+          total: row.itemTotal,
+          variant: row.itemVariant,
+          createdAt: row.itemCreatedAt,
+          product: row.product,
+          productImage: row.productImage,
+        });
+        acc[orderId].sellerTotal += Number(row.itemTotal);
+        acc[orderId].sellerItemCount += row.itemQuantity;
+      }
+
+      return acc;
+    },
+    {} as Record<
+      string,
+      {
+        orderId: string;
+        status: string;
+        paymentStatus: string | null;
+        total: string;
+        subtotal: string;
+        shipping: string;
+        shippingAddress: string | null;
+        city: string | null;
+        state: string | null;
+        zip: string | null;
+        country: string | null;
+        phone: string | null;
+        email: string | null;
+        name: string | null;
+        notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        customer: {
+          id: string;
+          name: string;
+          email: string;
+        } | null;
+        items: Array<{
+          id: string;
+          quantity: number;
+          price: string;
+          total: string;
+          variant: string | null;
+          createdAt: Date;
+          product: {
+            id: string;
+            name: string;
+            price: string;
+            unit: string;
+            brand: string | null;
+          };
+          productImage: string | null;
+        }>;
+        sellerTotal: number;
+        sellerItemCount: number;
+      }
+    >
+  );
+
+  return Object.values(groupedOrders);
+};
+
+const getSellerOrderDetailsSchema = z.object({
+  orderId: z.string(),
+});
+
+export const getSellerOrderDetails = async (
+  data: z.infer<typeof getSellerOrderDetailsSchema>
+) => {
+  const user = await serverAuth();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  const { orderId } = getSellerOrderDetailsSchema.parse(data);
+
+  // First check if this seller has any items in this order
+  const sellerHasItemsInOrder = await db
+    .select({ itemId: orderItems.id })
+    .from(orderItems)
+    .where(
+      and(eq(orderItems.orderId, orderId), eq(orderItems.sellerId, user.id))
+    )
+    .limit(1);
+
+  if (sellerHasItemsInOrder.length === 0) {
+    throw new Error("Order not found or you don't have items in this order");
+  }
+
+  // Get full order details with only seller's items
+  const orderDetails = await db
+    .select({
+      orderId: orders.id,
+      orderStatus: orders.status,
+      orderPaymentStatus: orders.paymentStatus,
+      orderTotal: orders.total,
+      orderSubtotal: orders.subtotal,
+      orderShipping: orders.shipping,
+      orderShippingAddress: orders.shippingAddress,
+      orderCity: orders.city,
+      orderState: orders.state,
+      orderZip: orders.zip,
+      orderCountry: orders.country,
+      orderPhone: orders.phone,
+      orderEmail: orders.email,
+      orderName: orders.name,
+      orderNotes: orders.notes,
+      orderCreatedAt: orders.createdAt,
+      orderUpdatedAt: orders.updatedAt,
+      customer: {
+        id: sql<string>`"customer"."id"`,
+        name: sql<string>`"customer"."name"`,
+        email: sql<string>`"customer"."email"`,
+      },
+      // Seller's items in this order
+      itemId: orderItems.id,
+      itemQuantity: orderItems.quantity,
+      itemPrice: orderItems.price,
+      itemTotal: orderItems.total,
+      itemVariant: orderItems.variant,
+      itemCreatedAt: orderItems.createdAt,
+      product: {
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        unit: products.unit,
+        brand: products.brand,
+      },
+      productImage: productImages.url,
+    })
+    .from(orders)
+    .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .leftJoin(
+      productImages,
+      and(
+        eq(products.id, productImages.productId),
+        eq(productImages.isPrimary, true)
+      )
+    )
+    .leftJoin(
+      sql`"user" as "customer"`,
+      eq(orders.userId, sql`"customer"."id"`)
+    )
+    .where(and(eq(orders.id, orderId), eq(orderItems.sellerId, user.id)))
+    .orderBy(orderItems.createdAt);
+
+  if (orderDetails.length === 0) {
+    throw new Error("Order not found");
+  }
+
+  const firstRow = orderDetails[0];
+  const items = orderDetails.map((row) => ({
+    id: row.itemId,
+    quantity: row.itemQuantity,
+    price: row.itemPrice,
+    total: row.itemTotal,
+    variant: row.itemVariant,
+    createdAt: row.itemCreatedAt,
+    product: row.product,
+    productImage: row.productImage,
+  }));
+
+  const sellerTotal = items.reduce((sum, item) => sum + Number(item.total), 0);
+  const sellerItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  return {
+    orderId: firstRow.orderId,
+    status: firstRow.orderStatus,
+    paymentStatus: firstRow.orderPaymentStatus,
+    total: firstRow.orderTotal,
+    subtotal: firstRow.orderSubtotal,
+    shipping: firstRow.orderShipping,
+    shippingAddress: firstRow.orderShippingAddress,
+    city: firstRow.orderCity,
+    state: firstRow.orderState,
+    zip: firstRow.orderZip,
+    country: firstRow.orderCountry,
+    phone: firstRow.orderPhone,
+    email: firstRow.orderEmail,
+    name: firstRow.orderName,
+    notes: firstRow.orderNotes,
+    createdAt: firstRow.orderCreatedAt,
+    updatedAt: firstRow.orderUpdatedAt,
+    customer: firstRow.customer,
+    items,
+    sellerTotal,
+    sellerItemCount,
+    isPartialOrder: true, // This indicates it's a multi-vendor order showing only seller's items
+  };
 };

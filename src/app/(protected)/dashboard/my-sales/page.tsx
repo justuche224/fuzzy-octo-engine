@@ -1,14 +1,14 @@
 import React from "react";
 import { serverAuth } from "@/lib/server-auth";
 import { redirect } from "next/navigation";
-import ListingsPage from "./listing-page";
+import SalesPage from "./sales-page";
 
 const page = async () => {
   const user = await serverAuth();
   if (!user) {
     return redirect("/auth");
   }
-  return <ListingsPage userId={user.id} />;
+  return <SalesPage userId={user.id} />;
 };
 
 export default page;

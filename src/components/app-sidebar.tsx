@@ -35,14 +35,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session, isPending, error } = authClient.useSession();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  console.log(`${pathname}?page=${searchParams.get("page")}`);
   const data = {
     user: {
       name: isPending
@@ -72,17 +70,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "My Listings",
         url: "/dashboard/my-listings",
         icon: IconListDetails,
-        isActive:
-          pathname === "/dashboard/my-listings" &&
-          (!searchParams.get("page") || searchParams.get("page") === "view"),
+        isActive: pathname === "/dashboard/my-listings",
       },
       {
         title: "List Item",
-        url: "/dashboard/my-listings?page=add",
+        url: "/dashboard/list-item",
         icon: IconPlus,
-        isActive:
-          pathname === "/dashboard/my-listings" &&
-          searchParams.get("page") === "add",
+        isActive: pathname === "/dashboard/list-item",
       },
       {
         title: "My Store View",
@@ -95,11 +89,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       },
       {
         title: "My Sales",
-        url: "/dashboard/my-listings?page=orders",
+        url: "/dashboard/my-sales",
         icon: IconChartBar,
-        isActive:
-          pathname === "/dashboard/my-listings" &&
-          searchParams.get("page") === "orders",
+        isActive: pathname === "/dashboard/my-sales",
       },
       {
         title: "My Purchases",
