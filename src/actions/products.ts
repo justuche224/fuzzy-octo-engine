@@ -382,13 +382,29 @@ export const createReview = async (
     .where(
       and(
         eq(orders.userId, user.id),
-        eq(orderItems.productId, validatedData.productId)
+        eq(orderItems.productId, validatedData.productId),
+        eq(orders.paymentStatus, "paid")
       )
     )
     .limit(1);
 
   if (hasPurchased.length === 0) {
     throw new Error("You can only review products you have purchased");
+  }
+
+  const existingReview = await db
+    .select({ id: reviews.id })
+    .from(reviews)
+    .where(
+      and(
+        eq(reviews.userId, user.id),
+        eq(reviews.productId, validatedData.productId)
+      )
+    )
+    .limit(1);
+
+  if (existingReview.length > 0) {
+    throw new Error("You have already reviewed this product");
   }
 
   const reviewId = crypto.randomUUID();
@@ -429,6 +445,59 @@ export const createReview = async (
   }
 
   return review;
+};
+
+export const getReviewStatistics = async (productId: string) => {
+  try {
+    const ratingStats = await db
+      .select({
+        rating: reviews.rating,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(eq(reviews.productId, productId))
+      .groupBy(reviews.rating)
+      .orderBy(desc(reviews.rating));
+
+    const [totalStats] = await db
+      .select({
+        averageRating: sql<number>`AVG(${reviews.rating})`,
+        totalReviews: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(eq(reviews.productId, productId));
+
+    const ratingDistribution = Array.from({ length: 5 }, (_, index) => {
+      const rating = 5 - index;
+      const stat = ratingStats.find((s) => s.rating === rating);
+      return {
+        rating,
+        count: Number(stat?.count || 0),
+        percentage: totalStats?.totalReviews
+          ? Math.round(
+              (Number(stat?.count || 0) / Number(totalStats.totalReviews)) * 100
+            )
+          : 0,
+      };
+    });
+
+    return {
+      averageRating: Number(totalStats?.averageRating || 0),
+      totalReviews: Number(totalStats?.totalReviews || 0),
+      ratingDistribution,
+    };
+  } catch (error) {
+    console.error("Error fetching review statistics:", error);
+    return {
+      averageRating: 0,
+      totalReviews: 0,
+      ratingDistribution: Array.from({ length: 5 }, (_, index) => ({
+        rating: 5 - index,
+        count: 0,
+        percentage: 0,
+      })),
+    };
+  }
 };
 
 const getSellerOrdersSchema = z.object({
@@ -1135,5 +1204,181 @@ export const getOrderDetails = async (orderId: string) => {
   } catch (error) {
     console.error("Error fetching order details:", error);
     throw new Error("Failed to fetch order details");
+  }
+};
+
+const getAllReviewsSchema = z.object({
+  page: z.number().default(1),
+  limit: z.number().max(50).default(20),
+  productId: z.string().optional(),
+  verified: z.boolean().optional(),
+  minRating: z.number().min(1).max(5).optional(),
+  maxRating: z.number().min(1).max(5).optional(),
+});
+
+export const getAllReviews = async (
+  data: z.infer<typeof getAllReviewsSchema>
+) => {
+  await isAdmin();
+
+  const validatedData = getAllReviewsSchema.parse(data);
+  const { page, limit, productId, verified, minRating, maxRating } =
+    validatedData;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = db
+      .select({
+        id: reviews.id,
+        rating: reviews.rating,
+        title: reviews.title,
+        content: reviews.content,
+        helpful: reviews.helpful,
+        verified: reviews.verified,
+        createdAt: reviews.createdAt,
+        updatedAt: reviews.updatedAt,
+        user: {
+          id: sql<string>`"user"."id"`,
+          name: sql<string>`"user"."name"`,
+          email: sql<string>`"user"."email"`,
+        },
+        product: {
+          id: products.id,
+          name: products.name,
+        },
+      })
+      .from(reviews)
+      .leftJoin(sql`"user"`, eq(reviews.userId, sql`"user"."id"`))
+      .leftJoin(products, eq(reviews.productId, products.id))
+      .$dynamic();
+
+    if (productId) {
+      query = query.where(eq(reviews.productId, productId));
+    }
+
+    if (verified !== undefined) {
+      query = query.where(eq(reviews.verified, verified));
+    }
+
+    if (minRating !== undefined) {
+      query = query.where(sql`${reviews.rating} >= ${minRating}`);
+    }
+
+    if (maxRating !== undefined) {
+      query = query.where(sql`${reviews.rating} <= ${maxRating}`);
+    }
+
+    const reviewsData = await query
+      .orderBy(desc(reviews.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    let countQuery = db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(reviews)
+      .$dynamic();
+
+    if (productId) {
+      countQuery = countQuery.where(eq(reviews.productId, productId));
+    }
+
+    if (verified !== undefined) {
+      countQuery = countQuery.where(eq(reviews.verified, verified));
+    }
+
+    if (minRating !== undefined) {
+      countQuery = countQuery.where(sql`${reviews.rating} >= ${minRating}`);
+    }
+
+    if (maxRating !== undefined) {
+      countQuery = countQuery.where(sql`${reviews.rating} <= ${maxRating}`);
+    }
+
+    const [{ count }] = await countQuery;
+
+    return {
+      reviews: reviewsData,
+      totalCount: Number(count),
+      totalPages: Math.ceil(Number(count) / limit),
+      currentPage: page,
+    };
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    throw new Error("Failed to fetch reviews");
+  }
+};
+
+const moderateReviewSchema = z.object({
+  reviewId: z.string(),
+  verified: z.boolean(),
+});
+
+export const moderateReview = async (
+  data: z.infer<typeof moderateReviewSchema>
+) => {
+  await isAdmin();
+
+  const { reviewId, verified } = moderateReviewSchema.parse(data);
+
+  try {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({
+        verified,
+        updatedAt: new Date(),
+      })
+      .where(eq(reviews.id, reviewId))
+      .returning();
+
+    return updatedReview;
+  } catch (error) {
+    console.error("Error moderating review:", error);
+    throw new Error("Failed to moderate review");
+  }
+};
+
+const deleteReviewAdminSchema = z.object({
+  reviewId: z.string(),
+});
+
+export const deleteReviewAdmin = async (
+  data: z.infer<typeof deleteReviewAdminSchema>
+) => {
+  await isAdmin();
+
+  const { reviewId } = deleteReviewAdminSchema.parse(data);
+
+  try {
+    const [reviewToDelete] = await db
+      .select({ productId: reviews.productId })
+      .from(reviews)
+      .where(eq(reviews.id, reviewId));
+
+    if (!reviewToDelete) {
+      throw new Error("Review not found");
+    }
+
+    await db.delete(reviews).where(eq(reviews.id, reviewId));
+
+    const avgRating = await db
+      .select({
+        avg: sql<number>`AVG(${reviews.rating})`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(eq(reviews.productId, reviewToDelete.productId));
+
+    await db
+      .update(products)
+      .set({
+        rating: avgRating[0]?.avg?.toString() || "0",
+        reviewCount: Number(avgRating[0]?.count || 0),
+      })
+      .where(eq(products.id, reviewToDelete.productId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    throw new Error("Failed to delete review");
   }
 };

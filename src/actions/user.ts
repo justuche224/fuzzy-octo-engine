@@ -613,3 +613,233 @@ export const deleteUser = async (data: z.infer<typeof deleteUserSchema>) => {
     throw new Error("Failed to delete user");
   }
 };
+
+export const canUserReview = async (productId: string) => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    return { canReview: false, reason: "Must be logged in" };
+  }
+
+  try {
+    const hasPurchased = await db
+      .select({ id: orderItems.id })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(
+        and(
+          eq(orders.userId, currentUser.id),
+          eq(orderItems.productId, productId),
+          eq(orders.paymentStatus, "paid")
+        )
+      )
+      .limit(1);
+
+    if (hasPurchased.length === 0) {
+      return { canReview: false, reason: "Must purchase product to review" };
+    }
+
+    const { reviews } = await import("@/db/schema");
+    const existingReview = await db
+      .select({ id: reviews.id })
+      .from(reviews)
+      .where(
+        and(
+          eq(reviews.userId, currentUser.id),
+          eq(reviews.productId, productId)
+        )
+      )
+      .limit(1);
+
+    if (existingReview.length > 0) {
+      return {
+        canReview: false,
+        reason: "Already reviewed this product",
+        hasReview: true,
+      };
+    }
+
+    return { canReview: true };
+  } catch (error) {
+    console.error("Error checking review eligibility:", error);
+    return { canReview: false, reason: "Error checking eligibility" };
+  }
+};
+
+export const getUserReviewForProduct = async (productId: string) => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    return null;
+  }
+
+  try {
+    const { reviews } = await import("@/db/schema");
+    const [userReview] = await db
+      .select({
+        id: reviews.id,
+        rating: reviews.rating,
+        title: reviews.title,
+        content: reviews.content,
+        helpful: reviews.helpful,
+        verified: reviews.verified,
+        createdAt: reviews.createdAt,
+        updatedAt: reviews.updatedAt,
+      })
+      .from(reviews)
+      .where(
+        and(
+          eq(reviews.userId, currentUser.id),
+          eq(reviews.productId, productId)
+        )
+      );
+
+    return userReview || null;
+  } catch (error) {
+    console.error("Error fetching user review:", error);
+    return null;
+  }
+};
+
+const updateReviewSchema = z.object({
+  reviewId: z.string(),
+  rating: z.number().int().min(1).max(5),
+  title: z.string().optional(),
+  content: z.string().min(5),
+});
+
+export const updateReview = async (
+  data: z.infer<typeof updateReviewSchema>
+) => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  const validatedData = updateReviewSchema.parse(data);
+  const { reviews } = await import("@/db/schema");
+
+  try {
+    const [existingReview] = await db
+      .select({ userId: reviews.userId, productId: reviews.productId })
+      .from(reviews)
+      .where(eq(reviews.id, validatedData.reviewId));
+
+    if (!existingReview || existingReview.userId !== currentUser.id) {
+      throw new Error("Review not found or unauthorized");
+    }
+
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({
+        rating: validatedData.rating,
+        title: validatedData.title,
+        content: validatedData.content,
+        updatedAt: new Date(),
+      })
+      .where(eq(reviews.id, validatedData.reviewId))
+      .returning();
+
+    const avgRating = await db
+      .select({
+        avg: sql<number>`AVG(${reviews.rating})`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(eq(reviews.productId, existingReview.productId));
+
+    if (avgRating[0]) {
+      await db
+        .update(products)
+        .set({
+          rating: avgRating[0].avg.toString(),
+          reviewCount: Number(avgRating[0].count),
+        })
+        .where(eq(products.id, existingReview.productId));
+    }
+
+    return updatedReview;
+  } catch (error) {
+    console.error("Error updating review:", error);
+    throw new Error("Failed to update review");
+  }
+};
+
+const deleteReviewSchema = z.object({
+  reviewId: z.string(),
+});
+
+export const deleteReview = async (
+  data: z.infer<typeof deleteReviewSchema>
+) => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  const { reviewId } = deleteReviewSchema.parse(data);
+  const { reviews } = await import("@/db/schema");
+
+  try {
+    const [existingReview] = await db
+      .select({ userId: reviews.userId, productId: reviews.productId })
+      .from(reviews)
+      .where(eq(reviews.id, reviewId));
+
+    if (!existingReview || existingReview.userId !== currentUser.id) {
+      throw new Error("Review not found or unauthorized");
+    }
+
+    await db.delete(reviews).where(eq(reviews.id, reviewId));
+
+    const avgRating = await db
+      .select({
+        avg: sql<number>`AVG(${reviews.rating})`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(reviews)
+      .where(eq(reviews.productId, existingReview.productId));
+
+    await db
+      .update(products)
+      .set({
+        rating: avgRating[0]?.avg?.toString() || "0",
+        reviewCount: Number(avgRating[0]?.count || 0),
+      })
+      .where(eq(products.id, existingReview.productId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    throw new Error("Failed to delete review");
+  }
+};
+
+const markReviewHelpfulSchema = z.object({
+  reviewId: z.string(),
+});
+
+export const markReviewHelpful = async (
+  data: z.infer<typeof markReviewHelpfulSchema>
+) => {
+  const currentUser = await serverAuth();
+  if (!currentUser) {
+    throw new Error("Unauthorized");
+  }
+
+  const { reviewId } = markReviewHelpfulSchema.parse(data);
+  const { reviews } = await import("@/db/schema");
+
+  try {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({
+        helpful: sql`${reviews.helpful} + 1`,
+      })
+      .where(eq(reviews.id, reviewId))
+      .returning();
+
+    return updatedReview;
+  } catch (error) {
+    console.error("Error marking review as helpful:", error);
+    throw new Error("Failed to mark review as helpful");
+  }
+};

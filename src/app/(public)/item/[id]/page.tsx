@@ -7,15 +7,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, Truck, Shield, RotateCcw, Store, User } from "lucide-react";
-import { getProduct, getProductReviews, getProducts } from "@/actions/products";
+import {
+  getProduct,
+  getProductReviews,
+  getProducts,
+  getReviewStatistics,
+} from "@/actions/products";
 import { isProductSaved } from "@/actions/user";
 import { notFound } from "next/navigation";
 import AddToCart from "@/cart/add-to-cart";
 import SaveProductButton from "@/components/save-product-button";
+import ReviewsSection from "@/components/reviews-section";
 import formatPrice from "@/lib/format-price";
+import { serverAuth } from "@/lib/server-auth";
 
 const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
+  const user = await serverAuth();
 
   let product;
   try {
@@ -24,16 +32,18 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     notFound();
   }
 
-  const [reviews, relatedProducts, isSaved] = await Promise.all([
-    getProductReviews({ productId: id, page: 1, limit: 5 }),
-    getProducts({
-      page: 1,
-      limit: 4,
-      categoryId: product.categoryId,
-      sortBy: "featured",
-    }),
-    isProductSaved(id),
-  ]);
+  const [reviews, relatedProducts, isSaved, reviewStatistics] =
+    await Promise.all([
+      getProductReviews({ productId: id, page: 1, limit: 5 }),
+      getProducts({
+        page: 1,
+        limit: 4,
+        categoryId: product.categoryId,
+        sortBy: "featured",
+      }),
+      isProductSaved(id),
+      getReviewStatistics(id),
+    ]);
 
   const primaryImage =
     product.images.find((img) => img.isPrimary) || product.images[0];
@@ -330,64 +340,12 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              {reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="border-b border-gray-100 last:border-0 pb-6 last:pb-0"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <Avatar>
-                          <AvatarImage src={review.user?.image || ""} />
-                          <AvatarFallback>
-                            <User className="w-4 h-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">
-                            {review.user?.name || "Anonymous"}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: 5 }).map((_, starIndex) => (
-                              <Star
-                                key={starIndex}
-                                className={`w-4 h-4 ${
-                                  starIndex < review.rating
-                                    ? "text-yellow-400 fill-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          {review.verified && (
-                            <Badge variant="secondary" className="text-xs mt-1">
-                              Verified Purchase
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      {review.title && (
-                        <h4 className="font-medium mb-1">{review.title}</h4>
-                      )}
-                      <p className="text-muted-foreground">{review.content}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    No reviews yet. Be the first to review this product!
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ReviewsSection
+            productId={id}
+            initialReviews={reviews}
+            initialStatistics={reviewStatistics}
+            currentUserId={user?.id}
+          />
         </TabsContent>
 
         {product.variants && product.variants.length > 0 && (
