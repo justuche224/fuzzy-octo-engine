@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import formatPrice from "@/lib/format-price";
 import { getProducts } from "@/actions/products";
+import Link from "next/link";
 
 interface Product {
   id: string;
@@ -95,20 +96,24 @@ const ListingsPage = ({ userId }: { userId: string }) => {
                       alt={product.name}
                       width={100}
                       height={100}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover aspect-square"
                     />
                   </CardHeader>
-                  <CardContent>
-                    <CardTitle>{product.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                      {product.description}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold">
-                        {formatPrice(Number(product.price))}
-                      </span>
-                    </div>
-                  </CardContent>
+                  <Link href={`/item/${product.id}`}>
+                    <CardContent className="space-y-2">
+                      <CardTitle className="line-clamp-2">
+                        {product.name}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
+                        {product.description}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold">
+                          {formatPrice(Number(product.price))}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Link>
                 </div>
               ))}
             </div>

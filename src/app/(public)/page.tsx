@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import React from "react";
 import { InputWithButton } from "@/components/search-bar";
 import Image from "next/image";
@@ -15,7 +17,7 @@ import AddToCart from "@/cart/add-to-cart";
 const Home = async () => {
   const dealsData = await getProducts({
     page: 1,
-    limit: 12,
+    limit: 50,
     sortBy: "featured",
   });
 

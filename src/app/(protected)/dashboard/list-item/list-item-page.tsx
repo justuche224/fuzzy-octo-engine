@@ -37,6 +37,7 @@ import Image from "next/image";
 import { z } from "zod";
 import { getCategories } from "@/actions/categories";
 import { createProduct } from "@/actions/products";
+import formatPrice from "@/lib/format-price";
 
 const productFormSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters."),
@@ -78,6 +79,8 @@ const ListItemPage = ({ userId }: { userId: string }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [formattedPrice, setFormattedPrice] = useState("");
+  const [formattedOriginalPrice, setFormattedOriginalPrice] = useState("");
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -260,7 +263,7 @@ const ListItemPage = ({ userId }: { userId: string }) => {
                   control={form.control}
                   name="categoryId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-full">
                       <FormLabel>Category</FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -268,7 +271,7 @@ const ListItemPage = ({ userId }: { userId: string }) => {
                         disabled={isLoadingCategories}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue
                               placeholder={
                                 isLoadingCategories
@@ -307,9 +310,19 @@ const ListItemPage = ({ userId }: { userId: string }) => {
                             placeholder="0.00"
                             className="pl-10"
                             {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const value = e.target.value;
+                              if (value && !isNaN(Number(value))) {
+                                setFormattedPrice(formatPrice(Number(value)));
+                              } else {
+                                setFormattedPrice("");
+                              }
+                            }}
                           />
                         </div>
                       </FormControl>
+                      <FormDescription>{formattedPrice || ""}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -332,11 +345,23 @@ const ListItemPage = ({ userId }: { userId: string }) => {
                             className="pl-10"
                             {...field}
                             value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const value = e.target.value;
+                              if (value && !isNaN(Number(value))) {
+                                setFormattedOriginalPrice(
+                                  formatPrice(Number(value))
+                                );
+                              } else {
+                                setFormattedOriginalPrice("");
+                              }
+                            }}
                           />
                         </div>
                       </FormControl>
                       <FormDescription>
-                        Set if this product is on sale
+                        Set if this product is on sale{" "}
+                        {formattedOriginalPrice || ""}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -366,14 +391,14 @@ const ListItemPage = ({ userId }: { userId: string }) => {
                   control={form.control}
                   name="unit"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-full">
                       <FormLabel>Unit</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select a unit" />
                           </SelectTrigger>
                         </FormControl>
