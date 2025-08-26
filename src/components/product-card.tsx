@@ -70,8 +70,8 @@ const ProductCard = ({ product, showAddToCart = true }: ProductCardProps) => {
 
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold">
+                <div className="flex items-center gap-2 max-md:flex-col">
+                  <span className="text-sm lg:text-lg font-bold">
                     {formatPrice(Number(product.price))}
                   </span>
                   {product.originalPrice &&

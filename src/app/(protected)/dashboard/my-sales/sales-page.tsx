@@ -131,7 +131,7 @@ const SalesPage = ({ userId }: { userId: string }) => {
             <div className="space-y-4">
               {sellerOrders.map((order) => (
                 <Card key={order.orderId} className="p-4">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-4 max-md:flex-col gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-lg">
@@ -170,7 +170,7 @@ const SalesPage = ({ userId }: { userId: string }) => {
                         {new Date(order.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="text-right space-y-1">
+                    <div className="text-left md:text-right space-y-1">
                       <p className="font-bold text-lg">
                         {formatPrice(order.sellerTotal)}
                       </p>

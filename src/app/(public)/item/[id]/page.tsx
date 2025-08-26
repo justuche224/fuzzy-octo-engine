@@ -186,6 +186,7 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
           <div className="space-y-4">
             <div className="flex gap-3">
               <AddToCart
+                width="w-[90%]"
                 product={{
                   slug: product.id,
                   name: product.name,
@@ -198,10 +199,6 @@ const ProductPage = async ({ params }: { params: Promise<{ id: string }> }) => {
               />
               <SaveProductButton productId={product.id} isSaved={isSaved} />
             </div>
-
-            <Button variant="outline" size="lg" className="w-full">
-              Buy Now
-            </Button>
           </div>
 
           <div className="grid grid-cols-3 gap-4 pt-6 border-t">

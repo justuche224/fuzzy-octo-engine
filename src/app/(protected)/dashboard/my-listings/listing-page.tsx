@@ -70,8 +70,8 @@ const ListingsPage = ({ userId }: { userId: string }) => {
   }, [userId]);
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 mt-16">
-      <h1 className="text-3xl font-bold mb-6">My Listings</h1>
+    <div className="container max-w-7xl mx-auto min-md:p-6 mt-16">
+      <h1 className="text-3xl font-bold mb-6 ml-5">My Listings</h1>
 
       <Card>
         <CardHeader>
@@ -84,7 +84,7 @@ const ListingsPage = ({ userId }: { userId: string }) => {
               <Loader className="animate-spin" />
             </div>
           ) : userProducts && userProducts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {userProducts.map((product) => (
                 <div
                   key={product.id}

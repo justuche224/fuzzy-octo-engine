@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 const AddToCart = ({
   product,
+  width,
 }: {
   product: {
     slug: string;
@@ -17,6 +18,7 @@ const AddToCart = ({
     images: { url: string }[];
     sellerId: string;
   };
+  width?: string;
 }) => {
   const { items, addItem, removeItem, updateItemQuantity } = useCartStore();
   const cartItem = items.find((item) => item.id === product.slug);
@@ -76,7 +78,7 @@ const AddToCart = ({
       {!cartItem ? (
         <Button
           size="sm"
-          className="w-full gap-1 text-xs"
+          className={`${width ?? "w-full"} gap-1 text-xs`}
           onClick={handleAddToCart}
           disabled={isOutOfStock}
         >

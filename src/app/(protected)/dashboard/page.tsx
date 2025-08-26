@@ -206,7 +206,7 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 container mx-auto max-w-7xl">
+    <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 container mx-auto max-w-7xl">
       <div>
         <h1 className="text-2xl lg:text-4xl font-bold">Dashboard</h1>
       </div>

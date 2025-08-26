@@ -76,10 +76,10 @@ const Home = async () => {
         <h1 className="text-2xl lg:text-4xl font-bold my-4">
           Welcome to the Milky Way Marketplace
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground max-md:text-xs">
           Explore our wide range of products and find the best deals for you.
         </p>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground max-md:text-xs">
           To list a product visit the{" "}
           <Link href="/auth" className="text-primary">
             Seller Registration
